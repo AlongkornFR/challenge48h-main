@@ -575,7 +575,7 @@ function SecretVideoOverlay({ onClose, onEnded }) {
   }, [onEnded]);
 
   return (
-    <div className="fixed inset-0 z-9999" style={{ background: '#000' }}>
+    <div className="fixed inset-0" style={{ background: '#000', zIndex: 9999 }}>
       <button
         onClick={onClose}
         className="absolute top-4 right-4 font-mono text-xs tracking-widest uppercase px-4 py-2 rounded cursor-pointer"
@@ -615,7 +615,7 @@ function SecretCodeSection({ onVideoOpen, onVideoEnded }) {
   function validate() {
     const correct = assembled.toUpperCase() === FINAL_CODE.toUpperCase();
     setResult(correct ? 'correct' : 'wrong');
-    if (correct) onVideoOpen(true);
+    if (correct) onVideoOpen(() => setResult(null));
   }
 
   return (
@@ -714,18 +714,12 @@ function SecretCodeSection({ onVideoOpen, onVideoEnded }) {
 
           {/* Result feedback */}
           {result === 'correct' && (
-            <>
-              <div
-                className="flex items-center justify-center gap-3 py-3 rounded-lg font-mono text-sm tracking-widest uppercase"
-                style={{ background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14' }}
-              >
-                ✓ CODE CORRECT — ACCÈS AUTORISÉ
-              </div>
-              <SecretVideoOverlay
-                onClose={() => { setResult(null); onVideoOpen(false); }}
-                onEnded={() => { setResult(null); onVideoOpen(false); onVideoEnded(); }}
-              />
-            </>
+            <div
+              className="flex items-center justify-center gap-3 py-3 rounded-lg font-mono text-sm tracking-widest uppercase"
+              style={{ background: 'rgba(57,255,20,0.06)', border: '1px solid rgba(57,255,20,0.3)', color: '#39ff14' }}
+            >
+              ✓ CODE CORRECT — ACCÈS AUTORISÉ
+            </div>
           )}
           {result === 'wrong' && (
             <div
@@ -1039,6 +1033,7 @@ function App() {
   const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [isLoaded, setIsLoaded] = useState(false);
   const [secretVideoOpen, setSecretVideoOpen] = useState(false);
+  const secretVideoOnCloseRef = useRef(null);
   const [showSecretEnding, setShowSecretEnding] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -1226,6 +1221,7 @@ function App() {
         </div>
       )}
       {showSecretEnding && <SecretEndingScreen onClose={() => setShowSecretEnding(false)} />}
+      {secretVideoOpen && <SecretVideoOverlay onClose={() => { setSecretVideoOpen(false); secretVideoOnCloseRef.current?.(); }} onEnded={() => { setSecretVideoOpen(false); secretVideoOnCloseRef.current?.(); setShowSecretEnding(true); }} />}
       {!secretVideoOpen && <MailboxPanel unlockedLevel={unlockedLevel} />}
       {!secretVideoOpen && <TimerWidget timeLeft={timeLeft} running={timerRunning} onToggle={handleTimerToggle} onReset={handleTimerReset} />}
       {!secretVideoOpen && <MusicControl audioRef={audioRef} playing={musicPlaying} onToggle={handleMusicToggle} volume={musicVolume} onVolume={handleMusicVolume} />}
@@ -1415,7 +1411,7 @@ function App() {
           </div>
 
           {/* ── Secret Code ── */}
-          <SecretCodeSection onVideoOpen={setSecretVideoOpen} onVideoEnded={() => setShowSecretEnding(true)} />
+          <SecretCodeSection onVideoOpen={(cb) => { secretVideoOnCloseRef.current = cb; setSecretVideoOpen(true); }} onVideoEnded={() => setShowSecretEnding(true)} />
 
           {/* ── Game cards grid ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 w-full mt-12">
